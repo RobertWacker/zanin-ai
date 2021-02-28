@@ -105,3 +105,6 @@ dist
 
 # Macos internal cash files
 .DS_Store
+
+# Yarn internal files
+yarn.lock
