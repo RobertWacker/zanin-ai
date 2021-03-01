@@ -29,7 +29,7 @@ export class CbrService {
          * Preparing a url assress
          */
         const url = this.basicApiUrl + '?date_req=' + queryDate;
-        console.log(url)
+
         let result: AxiosResponse<string> = undefined;
 
         try {
@@ -58,10 +58,12 @@ export class CbrService {
 
         const today = await this.getCurrencyRate(dateNow);
         const yesterday = await this.getCurrencyRate(dateYesterday);
+        const difference = this.getDifference(today, yesterday);
 
         return {
             today,
-            yesterday
+            yesterday,
+            difference,
         };
     }
 
@@ -85,7 +87,11 @@ export class CbrService {
         let day = date.getDate().toString();
         if (day.length == 1) day = '0' + day;
 
-        let month = date.getMonth().toString();
+        /**
+         * getMonth() returns integer number, between 0 and 11
+         */
+        let monthNumber = date.getMonth() + 1;
+        let month = monthNumber.toString();
         if (month.length == 1) month = '0' + month;
 
         const year = date.getFullYear();
@@ -108,7 +114,6 @@ export class CbrService {
             console.log('[CbrService.parseRateXML] - Parse error', error);
             return undefined;
         }
-        console.dir(parsedXML.ValCurs.Valute)
 
         /** List of all currencies */
         const currencyRateList = parsedXML?.ValCurs?.Valute;
@@ -116,7 +121,6 @@ export class CbrService {
         let rateObject: ICurrencyObject = {};
 
         for (const currency of symbol) {
-            let rate = undefined;
             for (let index = 0; index < currencyRateList.length; index++) {
                 if (currencyRateList[index]?.CharCode == currency) {
                     const rateValue = currencyRateList[index]?.Value;
@@ -132,15 +136,43 @@ export class CbrService {
     }
 
     /**
-     * Returns a yesterday value
+     * Returns a yesterday value (without weekends)
      */
     private getYesterdayDate(): Date {
         const currentDate = new Date();
-        let yesterday = currentDate.setDate(currentDate.getDate() - 1);
+        /**
+         * On weekends, the exchange rate does not change,
+         * so we take the previous working day
+         */
+        let offsetDays = 1;
+        if (currentDate.getDay() == 1) {
+            offsetDays = 3
+        }
+        const yesterday = currentDate.setDate(currentDate.getDate() - offsetDays);
+
         return new Date(yesterday);
     }
+
+    /**
+     * Returns difference between two current rates
+     */
+    private getDifference(today: ICurrencyObject, otherDay: ICurrencyObject): ICurrencyObject {
+        /**
+         * Check the length of two objects.
+         * They must be the same
+         */
+        if (Object.keys(today).length !== Object.keys(otherDay).length) return undefined;
+
+        let difference: ICurrencyObject = {};
+
+        for (let index = 0; index < Object.keys(today).length; index++) {
+            const key = Object.keys(today)[index];
+            const currentValue = today[key];
+            const lastValue = otherDay[key];
+         
+            difference[key] = Math.floor((currentValue - lastValue) * 10000) / 10000;
+        }
+
+        return difference;
+    }
 }
-
-
-const a = new CbrService;
-const b = a.getDayChangesRate().then(kek=>console.log(kek));

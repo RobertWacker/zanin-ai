@@ -3,6 +3,7 @@ export type CurrencySymbol = 'EUR' | 'USD';
 export interface IChangesRates {
     today: ICurrencyObject;
     yesterday: ICurrencyObject;
+    difference: ICurrencyObject;
 }
 
 export interface ICurrencyObject {
