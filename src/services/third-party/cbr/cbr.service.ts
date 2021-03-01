@@ -3,7 +3,7 @@ import Axios, { AxiosResponse } from 'axios';
 import { parse } from 'fast-xml-parser';
 import {
     ICurrencyObject,
-    IChangesRates,
+    IExchangeRates,
     CurrencySymbol,
     IResponseBasic
 } from './interfaces/currency.interface';
@@ -52,7 +52,7 @@ export class CbrService {
     /**
      * Returns the difference in rates per day
      */
-    public async getDayChangesRate(symbol?: CurrencySymbol[]): Promise<IChangesRates> {
+    public async getDayChangesRate(symbol?: CurrencySymbol[]): Promise<IExchangeRates> {
         const dateNow = new Date();
         let dateYesterday = this.getYesterdayDate();
 

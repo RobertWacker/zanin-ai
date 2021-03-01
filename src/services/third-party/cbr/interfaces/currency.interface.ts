@@ -1,6 +1,6 @@
 export type CurrencySymbol = 'EUR' | 'USD';
 
-export interface IChangesRates {
+export interface IExchangeRates {
     today: ICurrencyObject;
     yesterday: ICurrencyObject;
     difference: ICurrencyObject;
