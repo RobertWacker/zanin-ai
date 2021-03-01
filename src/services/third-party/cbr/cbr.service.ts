@@ -170,7 +170,7 @@ export class CbrService {
             const currentValue = today[key];
             const lastValue = otherDay[key];
          
-            difference[key] = Math.floor((currentValue - lastValue) * 10000) / 10000;
+            difference[key] = Math.floor((currentValue - lastValue) * 100) / 100;
         }
 
         return difference;
