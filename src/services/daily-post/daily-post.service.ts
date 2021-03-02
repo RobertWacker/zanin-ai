@@ -1,5 +1,9 @@
 // Todo: Remove later
 import 'reflect-metadata';
+import * as Dotenv from 'dotenv';
+Dotenv.config();
+// *
+
 import { Service, Container } from 'typedi';
 import * as RandomNumber from 'random-number';
 import { ApifyCovidService } from '../third-party/apify-covid/apify-covide.service';
@@ -7,6 +11,7 @@ import { CbrService } from '../third-party/cbr/cbr.service';
 import { CoinmarketcapService } from '../third-party/coinmarketcap/coinmarketcap.service';
 import { GiphyService } from '../third-party/giphy/giphy.service';
 import { OpenweathermapService } from '../third-party/openweathermap/openweathermap.service';
+import { RbkRssService } from '../third-party/rbk-rss/rbk-rss.service';
 import { IRatePhrases } from './interfaces/daily-post.interface';
 // import {} from '../third-party/apify-covid/interfaces/covid.interface';
 import { IExchangeRates, CurrencySymbol } from '../third-party/cbr/interfaces/currency.interface';
@@ -38,6 +43,10 @@ export class DailyPostService {
      * Weather service
      */
     private readonly openweathermapService: OpenweathermapService;
+    /**
+     * Service for fetch yesterday news
+     */
+    private readonly rbkRssService: RbkRssService;
     /** 
      * Currency symbols to display
      */
@@ -50,7 +59,7 @@ export class DailyPostService {
      * The value can be from 0 to 100
      * The higher the value, the less chance of a random phrase
      */
-    private readonly randomness = 70;
+    private readonly randomness = 20;
     /**
      * Comments for currency exchange rates
      */
@@ -102,9 +111,10 @@ export class DailyPostService {
         /** Init services */
         // this.apifyCovidService = Container.get(ApifyCovidService);
         this.cbrService = Container.get(CbrService);
-        // this.coinmarketcapService = Container.get(CoinmarketcapService);
+        this.coinmarketcapService = Container.get(CoinmarketcapService);
         // this.giphyService = Container.get(GiphyService);
         // this.openweathermapService = Container.get(OpenweathermapService);
+        this.rbkRssService = Container.get(RbkRssService);
     }
 
     /**
@@ -116,7 +126,7 @@ export class DailyPostService {
          * Preparing a block of exchange rates
          */
         let currencyRaw: IExchangeRates = undefined;
-        currencyRaw = await this.cbrService.getDayChangesRate([]);
+        currencyRaw = await this.cbrService.getDayChangesRate(this.currencySymbols);
 
         let currency: string = undefined;
         if (currencyRaw) {
@@ -126,15 +136,31 @@ export class DailyPostService {
         console.log(currency)
 
         /**
-         * Preparing a block of yesterday news
+         * Preparing a block of yesterday main news
          */
         let newsRaw = undefined;
-        //newsRaw = await this.
+        newsRaw = await this.rbkRssService.getNewsList();
+
+        let news: string = undefined;
+        if (newsRaw) {
+            news = this.decorateYesterdayNews(newsRaw);
+        }
+
+        console.log(news)
+
+        /**
+         * Preparing a black of cryptocurrecncy rates
+         */
+        let cryptocurrencyRaw = undefined;
+        cryptocurrencyRaw = await this.coinmarketcapService.getExchangeRates();
+        console.log('💳 Криптовалюта:')
+        console.log('BTC:', cryptocurrencyRaw.data[0].quote.RUB.price)
+        console.log('ETH:', cryptocurrencyRaw.data[1].quote.RUB.price)
 
 
         /** Combine information blocks into one */
         let dailyPost = '';
-        dailyPost.concat(currency);
+        dailyPost.concat(currency, news);
 
         return dailyPost;
     }
@@ -176,20 +202,22 @@ export class DailyPostService {
             eurPhrase = this.getRandomPhrase(this.currencyRateDict, 'down');
         }
 
-        return `
-            💵 USD: ${ usdRate } (${ usdDifferenceSign }) ${ usdPhrase }
-            💶 EUR: ${ eurRate } (${ eurDifferenceSign }) ${ eurPhrase }
-        `;
+        const usd = `💵 USD: ${ usdRate } (${ usdDifferenceSign }) ${ usdPhrase }\n`;
+        const eur = `💶 EUR: ${ eurRate } (${ eurDifferenceSign }) ${ eurPhrase }\n`;
+
+        return usd + eur;
     }
 
-    private decorateYesterdayMainNews(): string {
-        return `
-            📰 Важное за вчерашний день:
-            - В МИДе пообещали ответить на санкции ЕС по делу Навального
-            - Волонтер рассказала о болезни экс-участницы Little Big
-            - Финляндия ввела чрезвычайное положение из-за роста заболеваемости COVID
-        `;
+    private decorateYesterdayNews(newsList: string[]): string {
+        const header = '📰 Важное за вчерашний день:\n';
+        let body = '';
+        newsList.forEach(news => {
+            const sample = `- ${news}\n`;
+            body = body + sample;
+        });
+        return header + body;
     }
+
     private decorateCryptocurrencyExcahangeRates(): string {
         return `
             💳 Криптовалюта:
@@ -234,3 +262,5 @@ export class DailyPostService {
         return dictonary[direction]?.default;
     }
 }
+const a = new DailyPostService();
+a.generateDailyPost().then(kek=>console.log(kek));
